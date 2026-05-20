@@ -3,10 +3,9 @@
   "rootNamespace": "Blech.Editor",
   "references": [
     "Blech.Runtime",
-    "Unity.ProBuilder",
-    "Unity.ProBuilder.Editor",
     "Unity.Cinemachine",
     "Unity.InputSystem",
+    "Unity.TextMeshPro",
     "Unity.ugui"
   ],
   "includePlatforms": ["Editor"],

@@ -25,7 +25,7 @@ namespace Blech.UI
 
         private void Start()
         {
-            foreach (var f in FindObjectsByType<FinishTrigger>(FindObjectsSortMode.None))
+            foreach (var f in FindObjectsByType<FinishTrigger>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
                 f.OnRouteComplete += Show;
             if (runAgainButton != null) runAgainButton.onClick.AddListener(RunAgain);
             if (mainMenuButton != null) mainMenuButton.onClick.AddListener(ToMainMenu);

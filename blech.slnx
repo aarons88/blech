@@ -1,4 +1,7 @@
 ﻿<Solution>
+  <Project Path="Blech.Editor.csproj" />
+  <Project Path="Blech.Runtime.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="Blech.Tests.Edit.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
 </Solution>

@@ -16,9 +16,9 @@ namespace Blech.UI
 
         private void Start()
         {
-            foreach (var cp in FindObjectsByType<Checkpoint>(FindObjectsSortMode.None))
+            foreach (var cp in FindObjectsByType<Checkpoint>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
                 cp.OnRegistered += cp2 => Show($"{cp2.displayName}!");
-            foreach (var f in FindObjectsByType<FinishTrigger>(FindObjectsSortMode.None))
+            foreach (var f in FindObjectsByType<FinishTrigger>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
                 f.OnRouteComplete += () => Show("PEAK reached!");
         }
 
