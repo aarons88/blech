@@ -66,6 +66,13 @@ crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
 
+# Third-party asset packs (re-fetched via tools/bootstrap.sh)
+/Assets/Blech/_ThirdParty/
+
+# Build output
+/Builds/
+TestResults.xml
+
 # macOS
 .DS_Store
 
