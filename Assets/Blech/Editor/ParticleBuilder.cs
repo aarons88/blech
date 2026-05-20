@@ -32,7 +32,9 @@ namespace Blech.Editor
             var shape = ps.shape; shape.shapeType = ParticleSystemShapeType.Hemisphere; shape.radius = 1.5f;
 
             var vel = ps.velocityOverLifetime; vel.enabled = true;
+            vel.x = new ParticleSystem.MinMaxCurve(0f, 0f);
             vel.y = new ParticleSystem.MinMaxCurve(0.3f, 1.2f);
+            vel.z = new ParticleSystem.MinMaxCurve(0f, 0f);
 
             var color = ps.colorOverLifetime; color.enabled = true;
             color.color = new ParticleSystem.MinMaxGradient(MakeFadeGradient(new Color(0.8f, 1f, 0.9f, 0.6f)));
@@ -65,7 +67,9 @@ namespace Blech.Editor
             shape.angle = 25f; shape.radius = 0.1f;
 
             var vel = ps.velocityOverLifetime; vel.enabled = true;
+            vel.x = new ParticleSystem.MinMaxCurve(0f, 0f);
             vel.y = new ParticleSystem.MinMaxCurve(2f, 5f);
+            vel.z = new ParticleSystem.MinMaxCurve(0f, 0f);
 
             var color = ps.colorOverLifetime; color.enabled = true;
             color.color = new ParticleSystem.MinMaxGradient(MakeFadeGradient(new Color(0.7f, 1f, 0.2f, 1f)));
@@ -91,7 +95,9 @@ namespace Blech.Editor
             shape.scale = new Vector3(3, 3, 0.1f);
 
             var vel = ps.velocityOverLifetime; vel.enabled = true;
-            vel.z = new ParticleSystem.MinMaxCurve(5f);
+            vel.x = new ParticleSystem.MinMaxCurve(0f, 0f);
+            vel.y = new ParticleSystem.MinMaxCurve(0f, 0f);
+            vel.z = new ParticleSystem.MinMaxCurve(5f, 5f);
 
             var color = ps.colorOverLifetime; color.enabled = true;
             color.color = new ParticleSystem.MinMaxGradient(MakeFadeGradient(new Color(1f, 1f, 1f, 0.4f)));
