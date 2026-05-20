@@ -52,8 +52,10 @@ namespace Blech.Editor
             SerializedObjectAssign(climber, "stats", stats);
 
             GameObject body = BuildBody(root.transform, bodyMat);
-            MakeEye("Eye_L", body.transform, new Vector3(-0.18f, 0.25f, 0.5f), eyeMat, pupilMat);
-            MakeEye("Eye_R", body.transform, new Vector3( 0.18f, 0.25f, 0.5f), eyeMat, pupilMat);
+            // Eyes are parented to the root (not the body) so they keep their own scale,
+            // unaffected by body squash/stretch animation.
+            MakeEye("Eye_L", root.transform, new Vector3(-0.16f, 0.78f, 0.32f), eyeMat, pupilMat);
+            MakeEye("Eye_R", root.transform, new Vector3( 0.16f, 0.78f, 0.32f), eyeMat, pupilMat);
 
             SerializedObjectAssign(visual, "body", body.transform);
             SerializedObjectAssignArray(visual, "limbs", new Transform[0]);
@@ -64,51 +66,18 @@ namespace Blech.Editor
 
         static GameObject BuildBody(Transform parent, Material mat)
         {
-            // Prefer egg (bean-shaped), then avocado (round-ish), then coconut (round).
-            var bodyMesh = TryLoadMeshExact("Egg_Whole")
-                        ?? TryLoadMeshExact("Avocado")
-                        ?? TryLoadMeshExact("Coconut");
-
-            GameObject body;
-            if (bodyMesh != null)
-            {
-                body = (GameObject)PrefabUtility.InstantiatePrefab(bodyMesh);
-                body.name = "Body";
-                body.transform.SetParent(parent, false);
-                body.transform.localPosition = new Vector3(0, 0.1f, 0);
-                body.transform.localScale = Vector3.one * 1.4f;
-                foreach (var c in body.GetComponentsInChildren<Collider>()) Object.DestroyImmediate(c);
-                foreach (var mr in body.GetComponentsInChildren<MeshRenderer>()) mr.sharedMaterial = mat;
-            }
-            else
-            {
-                body = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                body.name = "Body";
-                body.transform.SetParent(parent, false);
-                body.transform.localPosition = new Vector3(0, 0.5f, 0);
-                body.transform.localScale = new Vector3(0.55f, 0.7f, 0.65f);
-                Object.DestroyImmediate(body.GetComponent<Collider>());
-                body.GetComponent<MeshRenderer>().sharedMaterial = mat;
-            }
+            // Stretched-sphere bean. We tried importing Quaternius food meshes; the FBX
+            // loading and material reassignment was unreliable enough that the user saw
+            // an invisible character. Guaranteed-visible primitive sphere is the safer
+            // floor; we can iterate on the mesh once gameplay is solid.
+            var body = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            body.name = "Body";
+            body.transform.SetParent(parent, false);
+            body.transform.localPosition = new Vector3(0, 0.5f, 0);
+            body.transform.localScale = new Vector3(0.6f, 0.85f, 0.7f);
+            Object.DestroyImmediate(body.GetComponent<Collider>());
+            body.GetComponent<MeshRenderer>().sharedMaterial = mat;
             return body;
-        }
-
-        /// <summary>
-        /// Loads an FBX from _ThirdParty whose filename (without extension) exactly matches
-        /// the given name. The old fuzzy contains-match could return a multi-item FBX (e.g.
-        /// a sausage assortment) and turn the player into "five hot dogs."
-        /// </summary>
-        static GameObject TryLoadMeshExact(string exactName)
-        {
-            string[] guids = AssetDatabase.FindAssets($"t:Model {exactName}", new[] { "Assets/Blech/_ThirdParty" });
-            foreach (var g in guids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(g);
-                string fileName = System.IO.Path.GetFileNameWithoutExtension(path);
-                if (string.Equals(fileName, exactName, System.StringComparison.OrdinalIgnoreCase))
-                    return AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            }
-            return null;
         }
 
         static void MakeEye(string name, Transform parent, Vector3 pos, Material eyeMat, Material pupilMat)

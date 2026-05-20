@@ -62,6 +62,10 @@ namespace Blech.Editor
             var sfx = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Blech/Prefabs/SfxPlayer.prefab");
             if (sfx != null) PrefabUtility.InstantiatePrefab(sfx);
 
+            // MusicPlayer (also persists across scene loads)
+            var music = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Blech/Prefabs/MusicPlayer.prefab");
+            if (music != null) PrefabUtility.InstantiatePrefab(music);
+
             EditorSceneManager.SaveScene(scene, ScenePath);
 
             // Build settings

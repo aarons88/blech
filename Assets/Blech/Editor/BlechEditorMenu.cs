@@ -17,6 +17,7 @@ namespace Blech.Editor
             BuildPlayerPrefab();
             BuildHazardPrefabs();
             BuildSfxPlayerPrefab();
+            BuildMusicPlayerPrefab();
             BuildMainMenuScene();
             BuildVerticalSliceScene();
             AssetDatabase.SaveAssets();
@@ -41,6 +42,9 @@ namespace Blech.Editor
 
         [MenuItem(MenuRoot + "Sfx Player Prefab")]
         public static void BuildSfxPlayerPrefab() => SfxPrefabBuilder.BuildAll();
+
+        [MenuItem(MenuRoot + "Music Player Prefab")]
+        public static void BuildMusicPlayerPrefab() => MusicPrefabBuilder.BuildAll();
 
         [MenuItem(MenuRoot + "Main Menu Scene")]
         public static void BuildMainMenuScene() => MainMenuSceneBuilder.Build();

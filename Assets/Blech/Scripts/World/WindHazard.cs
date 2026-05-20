@@ -45,7 +45,10 @@ namespace Blech.World
             _t = 0f;
             if (next == Phase.Warning)
             {
-                Blech.Audio.SfxPlayer.Play(Blech.Audio.SfxId.WindWarning);
+                // Only fire the warning if a player is actually inside the trigger.
+                // Otherwise distant wind hazards beep at you across the whole level.
+                if (_players.Count > 0)
+                    Blech.Audio.SfxPlayer.Play(Blech.Audio.SfxId.WindWarning);
             }
             else if (next == Phase.Gust && streaksVfx != null)
             {

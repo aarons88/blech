@@ -42,7 +42,9 @@ namespace Blech.World
             {
                 if (splashVfx != null) splashVfx.Play();
                 if (killVolumeRoot != null) killVolumeRoot.SetActive(true);
-                Blech.Audio.SfxPlayer.Play(Blech.Audio.SfxId.AcidSplash);
+                // Splash SFX is gated on the player being in the kill volume — see
+                // KillVolume's trigger entry. Firing it on every erupt would beep
+                // across the level since this is 2D audio.
             }
             else if (killVolumeRoot != null)
             {
