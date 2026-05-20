@@ -13,13 +13,15 @@ Success criteria:
 
 1. A single player can complete the full route (intestine → stomach → throat → mouth) in 5–10 minutes.
 2. Climbing feels responsive, stamina drains meaningfully, slipping is readable.
-3. Each biome has a visually distinct identity using only ProBuilder + ShaderGraph + VFX.
+3. Each biome has a visually distinct identity using only ProBuilder + ShaderLab + ParticleSystems.
 4. The build is shippable as a Windows + Mac standalone for friends to try.
 5. Total third-party dollar cost: $0.
 
 ## 2. Architectural Approach
 
-**Greybox-first, mechanics-first.** All environment geometry is authored with **Unity ProBuilder**; the *Blech look* comes from ShaderGraph materials, VFX Graph particles, and lighting. The only imported 3D meshes are the Quaternius food characters.
+**Greybox-first, mechanics-first, script-automated.** All environment geometry is authored with **Unity ProBuilder** via code (not the GUI). The *Blech look* comes from hand-written ShaderLab/HLSL shaders, ParticleSystem (Shuriken) effects, and URP lighting. The only imported 3D meshes are Quaternius food character meshes.
+
+**Authoring philosophy:** every Unity asset (materials, prefabs, scenes, ScriptableObjects, UI canvases, particle systems) is created by an **editor automation toolkit** — C# editor scripts under `Assets/Blech/Editor/` — invokable from the menu bar (`Blech > Build > …`) or headlessly via `unity -batchmode -executeMethod`. Manual editor steps are minimized to: opening the project once, installing Unity itself, and playtesting. This keeps the project AI-agent-friendly and reproducible from source.
 
 **Player physics:** `CharacterController` + custom climb logic. Predictable, no rigidbody drift during climbing, easy to project movement onto wall planes.
 
@@ -33,14 +35,19 @@ Success criteria:
 
 **Engine:** Unity 6 LTS, 3D URP template.
 
-**Packages:**
+**Packages** (via direct edits to `Packages/manifest.json`, no GUI):
 
-- Input System (new)
-- Cinemachine
-- ProBuilder
-- ProGrids
-- VFX Graph
-- TextMeshPro (default with URP)
+- `com.unity.inputsystem` (default in Unity 6)
+- `com.unity.cinemachine` — **Cinemachine 3.x** (major API rewrite; uses `CinemachineCamera` + `CinemachineOrbitalFollow`, namespace `Unity.Cinemachine`)
+- `com.unity.probuilder` — for code-driven geometry via `ProBuilderMesh` API
+- `com.unity.ugui` — TextMeshPro is now folded into this package; no separate `com.unity.textmeshpro` install
+- `com.unity.test-framework` — NUnit-based EditMode/PlayMode tests
+
+**Explicitly NOT used:**
+
+- ~~`com.unity.progrids`~~ — deprecated; replaced by Unity's built-in Grid & Snap Settings
+- ~~`com.unity.visualeffectgraph`~~ — no public C# authoring API, blocks our automation philosophy. Using `UnityEngine.ParticleSystem` (Shuriken) instead — fully script-authorable, not deprecated, on Unity's 2025 roadmap.
+- ~~`com.unity.shadergraph`~~ — `.shadergraph` assets have no public authoring API. Using hand-written ShaderLab/HLSL `.shader` text files instead — fully supported in URP Unity 6, version-controllable, AI-editable.
 
 **Folder layout:** follows PRD §22 with one addition:
 
@@ -50,8 +57,9 @@ Assets/Blech/
   Art/
     Characters/       # food character prefabs, eye/limb primitives
     Environment/      # nothing imported; ProBuilder authoring here
-    Materials/        # 6 ShaderGraph materials
-    Particles/        # 4 VFX Graphs
+    Shaders/          # 6 ShaderLab .shader text files
+    Materials/        # 6 generated .mat assets
+    Particles/        # 4 ParticleSystem prefabs
   Audio/
     SFX/              # Kenney + freesound placeholders
     Music/            # empty for now
@@ -141,7 +149,7 @@ Holds the food mesh and procedural animation.
 
 ### 4.7 Camera
 
-Cinemachine FreeLook on the player. Single rig. Default Unity FreeLook tuning to start; revisit if it feels bad during climb.
+**Cinemachine 3** `CinemachineCamera` GameObject with a `CinemachineOrbitalFollow` component (the FreeLook-equivalent 3-rig orbit camera in Cinemachine 3). `Follow` and `LookAt` bound to the Bean transform. Defaults to start; revisit during tuning.
 
 ## 5. World & Hazard Systems
 
@@ -161,7 +169,7 @@ Trigger collider. On `OnTriggerEnter` with player: calls `PlayerRespawn.Kill(cau
 
 ### 5.4 `AcidHazard`
 
-Composite: a `KillVolume` (cause = `Acid`) + an `AcidHazardVisual` companion that spawns the bubble VFX Graph and applies the `Acid_Surface` material.
+Composite: a `KillVolume` (cause = `Acid`) + an `AcidHazardVisual` companion that drives the bubble `ParticleSystem` and applies the `Acid_Surface` material.
 
 ### 5.5 `AcidGeyser`
 
@@ -205,21 +213,23 @@ Subscribes to `PlayerRespawn.OnKill`, route start/end. End screen reads from thi
 
 ### 5.11 Materials & VFX
 
-Six ShaderGraph materials authored in-project:
+**Six hand-written ShaderLab/HLSL shaders** under `Assets/Blech/Art/Shaders/`. All inherit from a common URP Lit template (`Universal Render Pipeline/Lit` features: SRP Batcher compatible, shadow caster pass, GI). Time-driven effects use the URP `_Time` shader variable. Materials are generated from C# via an editor toolkit menu (`Blech > Build > Materials`).
 
-1. `Intestine_Organic` — pink, fake subsurface (gradient + emission), slow pulse via shader time.
-2. `Stomach_Wall` — sickly green, glossy.
-3. `Throat_Tissue` — deep red, animated vertex displacement noise.
-4. `Mucus_Slip` — translucent, animated UV scroll for shimmer.
-5. `Acid_Surface` — neon green, strong emission, distortion.
-6. `Tongue` — pink, high gloss for saliva sheen.
+1. `Blech/Intestine_Organic` — pink Lit, slow emission pulse via `_Time`.
+2. `Blech/Stomach_Wall` — sickly green Lit, high smoothness, no pulse.
+3. `Blech/Throat_Tissue` — deep red-purple Lit, optional subtle vertex displacement (sine-wave `_Time` perturbation).
+4. `Blech/Mucus_Slip` — translucent, animated UV scroll noise for shimmer.
+5. `Blech/Acid_Surface` — neon green emission, animated UV distortion.
+6. `Blech/Tongue` — bright pink, very high smoothness for saliva sheen.
 
-Four VFX Graphs:
+**Four ParticleSystems** (Shuriken), authored as prefabs by editor scripts using the full `ParticleSystem` C# API (emission, shape, velocity-over-lifetime, color-over-lifetime, size-over-lifetime modules):
 
-1. **Bubbles** — generic ambient bubbles (used in intestine + stomach).
-2. **Acid splash** — eruption burst for geysers, splash on player respawn.
-3. **Wind streaks** — stretched billboards along gust direction.
-4. **Confetti** — burst on finish.
+1. **Bubbles** — ambient particle effect (used in intestine + stomach acid).
+2. **Acid splash** — burst on geyser erupt.
+3. **Wind streaks** — stretched billboards in gust direction.
+4. **Confetti** — burst on finish trigger.
+
+Particle textures pull from Kenney Particle Pack (CC0 billboards/sprites).
 
 ## 6. Biome Layouts
 
@@ -297,31 +307,37 @@ Overlay on the gameplay scene, triggered by `FinishTrigger.OnRouteComplete`.
 
 Placeholder-only for this slice. Eleven SFX hooks; tracks deferred.
 
-| Event | Source | Volume |
+| Event | Kenney source pack | Volume |
 |---|---|---|
-| Footstep | Kenney UI Audio (light tick) | one-shot per step (timed by movement controller) |
-| Jump | Kenney Interface Sounds | one-shot |
-| Grab wall | Kenney Impact Sounds | one-shot |
-| Slip | Kenney Impact Sounds | one-shot |
-| Fall yell | freesound.org cartoon yell | one-shot |
-| Mucus squelch | freesound.org "squelch" | one-shot |
-| Acid bubble | Kenney Particle Pack audio | loop in acid range |
-| Acid splash | Kenney Impact | one-shot on geyser |
-| Wind warning | Kenney Interface (whoosh ramp) | one-shot pre-gust |
-| Checkpoint "blub" | Kenney UI Audio | one-shot |
-| Finish fanfare | Kenney UI Audio (jingle) | one-shot |
+| Footstep | RPG Audio | one-shot per step (timed by movement controller) |
+| Jump | Voiceover Pack (short grunt) | one-shot |
+| Grab wall | Impact Sounds | one-shot |
+| Slip | Impact Sounds | one-shot |
+| Fall yell | Voiceover Pack | one-shot |
+| Mucus squelch | Impact Sounds | one-shot on slip onset |
+| Acid bubble | Sci-fi Sounds (looped bubbly synth) | low-volume loop near acid |
+| Acid splash | Impact Sounds | one-shot on geyser erupt |
+| Wind warning | Sci-fi Sounds (whoosh ramp) | one-shot pre-gust |
+| Checkpoint "blub" | Digital Audio | one-shot |
+| Finish fanfare | Music Jingles | one-shot |
 
 Audio implementation: a single `SfxPlayer` scene singleton with `Play(SfxId id)` and an inspector-assigned clip table.
 
 ## 9. Assets & Acquisition
 
-Three zip imports total. Everything else authored in-project.
+Nine zip imports total (two Quaternius packs + seven Kenney packs). Everything else is authored in-project by the editor toolkit.
 
 | Asset | Source | License | Purpose |
 |---|---|---|---|
-| Quaternius Ultimate Food Pack | `quaternius.com/packs/ultimatefood.html` | CC0 | Bean, Pea, Carrot meshes |
-| Kenney Particle Pack | `kenney.nl/assets/particle-pack` | CC0 | VFX Graph billboard textures |
-| Kenney Audio Bundles | `kenney.nl/assets/category:audio` | CC0 | SFX placeholders |
+| Quaternius Ultimate Food Pack | `quaternius.com/packs/ultimatefood.html` | CC0 | Food character meshes (prepared foods) |
+| Quaternius Ultimate Crops Pack | `quaternius.com/packs/ultimatecrops.html` | CC0 | Bean/pea/carrot vegetable meshes (paired with Food Pack to cover all three characters) |
+| Kenney Particle Pack | `kenney.nl/assets/particle-pack` | CC0 | ParticleSystem billboard textures |
+| Kenney RPG Audio | `kenney.nl/assets/rpg-audio` | CC0 | Footsteps |
+| Kenney Voiceover Pack | `kenney.nl/assets/voiceover-pack` | CC0 | Jumps, falls, yells |
+| Kenney Impact Sounds | `kenney.nl/assets/impact-sounds` | CC0 | Wall grabs, slips, squelch, splashes |
+| Kenney Sci-fi Sounds | `kenney.nl/assets/sci-fi-sounds` | CC0 | Wind warnings, acid bubbling |
+| Kenney Digital Audio | `kenney.nl/assets/digital-audio` | CC0 | Checkpoint pickup |
+| Kenney Music Jingles | `kenney.nl/assets/music-jingles` | CC0 | Finish fanfare |
 | Fredoka / Bagel Fat One font | Google Fonts | OFL | Title + UI |
 
 All imports land in `Assets/Blech/_ThirdParty/<PackName>/` and are never edited in place.
@@ -338,7 +354,7 @@ All imports land in `Assets/Blech/_ThirdParty/<PackName>/` and are never edited 
 | Risk | Mitigation |
 |---|---|
 | Climbing feels bad on `CharacterController` | Validate in `Prototype_ClimbingToy.unity` first before building biomes. If unworkable, switch to Kinematic Rigidbody; movement controller is small enough to swap. |
-| ProBuilder geometry looks too flat | Lean harder on ShaderGraph vertex displacement and VFX particles. Add fog/volumetric to mask geometry weakness. |
+| ProBuilder geometry looks too flat | Lean harder on ShaderLab vertex displacement (in `Throat_Tissue.shader`) and ParticleSystem particles. Add fog/volumetric to mask geometry weakness. |
 | Quaternius meshes don't match "tiny limbed food character" | Add primitive limbs/eyes as children (already in plan). If body shape is wrong, swap with another Quaternius mesh or generate a custom one via `nano-banana-sprites`. |
 | Scope creep into M4 (piton) before slice is fun | Hard rule: no piton work until the route is completable end-to-end without one. |
 | Wind hazard breaks climbing in unfun ways | Tune `WindHazard.strength` and `gripStrength` in playtest. Worst case, gusts only knock players in `Idle`, not in `Climbing`. |
